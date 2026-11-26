@@ -145,5 +145,7 @@ export const PROFILE = {
       },
     ],
     cvAvailable: true,
+    cvPath: "/cv/CV_Alessia_Micieli_eng.pdf",
+    cvFileName: "CV_Alessia_Micieli_eng.pdf",
   },
 };

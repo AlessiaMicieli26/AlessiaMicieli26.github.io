@@ -2,11 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Download, Eye } from "lucide-react";
 import { PROFILE } from "@/data/profile";
+import { BASE_PATH } from "@/lib/siteConfig";
 import { SectionFrame } from "@/components/editorial/SectionFrame";
 
 export default function AboutPage() {
+  const cvUrl = `${BASE_PATH}${PROFILE.contact.cvPath}`;
   return (
     <SectionFrame
       sectionId="about"
@@ -53,6 +55,23 @@ export default function AboutPage() {
           <p className="mt-3 font-display text-lg text-alabaster">
             {PROFILE.philosophyTitle}
           </p>
+          <div className="mt-6 flex flex-wrap gap-2.5">
+            <Link
+              href="/contact#cv"
+              className="inline-flex items-center gap-1.5 border border-limeAccent/45 bg-limeAccent/[0.06] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-limeAccent transition-colors hover:border-limeAccent hover:bg-limeAccent/15"
+            >
+              <Eye size={11} />
+              <span>View CV</span>
+            </Link>
+            <a
+              href={cvUrl}
+              download={PROFILE.contact.cvFileName}
+              className="inline-flex items-center gap-1.5 border border-alabaster/20 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-alabaster/85 transition-colors hover:border-limeAccent hover:text-limeAccent"
+            >
+              <Download size={11} />
+              <span>CV PDF</span>
+            </a>
+          </div>
         </div>
         <div className="space-y-5 text-[15px] leading-[1.75] text-alabaster/85 md:col-span-8">
           {PROFILE.bioParagraphs.map((paragraph, i) => (

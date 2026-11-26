@@ -1,14 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
-import { ArrowUpRight, Check, Copy, FileText, Printer } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ArrowUpRight, Check, Copy, Download, Eye, EyeOff } from "lucide-react";
 import { PROFILE } from "@/data/profile";
-import { PUBLICATIONS } from "@/data/publications";
+import { BASE_PATH } from "@/lib/siteConfig";
 import { SectionFrame } from "@/components/editorial/SectionFrame";
 
 export default function ContactPage() {
   const [copied, setCopied] = useState(false);
   const [cvOpen, setCvOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#cv") {
+      setCvOpen(true);
+    }
+  }, []);
+
+  const cvUrl = `${BASE_PATH}${PROFILE.contact.cvPath}`;
 
   const handleCopyEmail = async () => {
     try {
@@ -74,7 +82,7 @@ export default function ContactPage() {
           </p>
         </div>
         <div>
-          <span className="mono-label text-slateMuted">Location & Lab</span>
+          <span className="mono-label text-slateMuted">Location &amp; Lab</span>
           <p className="mt-2.5 font-display text-base text-alabaster">
             {PROFILE.location}
           </p>
@@ -84,7 +92,9 @@ export default function ContactPage() {
 
       {/* Platforms Index */}
       <section className="py-10">
-        <span className="mono-label text-slateMuted">Academic & Code Platforms</span>
+        <span className="mono-label text-slateMuted">
+          Academic &amp; Code Platforms
+        </span>
         <div className="mt-6 divide-y divide-alabaster/10 border-t border-alabaster/12">
           {PROFILE.contact.links.map((item) => (
             <a
@@ -114,15 +124,16 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Curriculum Vitae — Inline Editorial Summary + Printable Export */}
-      <section className="border-t border-alabaster/12 pt-10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Curriculum Vitae — Official PDF Viewer & Direct Download */}
+      <section id="cv" className="scroll-mt-28 border-t border-alabaster/12 pt-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <span className="mono-label text-slateMuted">
-              Curriculum Vitae
-            </span>
+            <span className="mono-label text-slateMuted">Curriculum Vitae</span>
             <p className="mt-2 font-display text-lg text-alabaster">
-              Academic Summary & Printable CV
+              Official Academic CV (English · PDF)
+            </p>
+            <p className="mt-1 font-mono text-[11px] text-slateMuted">
+              {PROFILE.contact.cvFileName}
             </p>
           </div>
 
@@ -130,79 +141,77 @@ export default function ContactPage() {
             <button
               type="button"
               onClick={() => setCvOpen((v) => !v)}
-              className="inline-flex items-center gap-2 border border-alabaster/20 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-alabaster transition-colors hover:border-limeAccent hover:text-limeAccent"
+              className="inline-flex items-center gap-2 border border-limeAccent/50 bg-limeAccent/[0.06] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-limeAccent transition-colors hover:border-limeAccent hover:bg-limeAccent/15"
+              aria-expanded={cvOpen}
             >
-              <FileText size={13} />
-              <span>{cvOpen ? "Hide CV Summary" : "Inspect CV"}</span>
+              {cvOpen ? <EyeOff size={13} /> : <Eye size={13} />}
+              <span>{cvOpen ? "Hide CV Preview" : "View CV"}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setCvOpen(true);
-                setTimeout(() => window.print(), 120);
-              }}
-              className="inline-flex items-center gap-2 border border-alabaster/15 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-slateMuted transition-colors hover:border-alabaster/40 hover:text-alabaster"
+            <a
+              href={cvUrl}
+              download={PROFILE.contact.cvFileName}
+              className="inline-flex items-center gap-2 border border-alabaster/20 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-alabaster transition-colors hover:border-limeAccent hover:text-limeAccent"
             >
-              <Printer size={13} />
-              <span>Print / Save PDF</span>
-            </button>
+              <Download size={13} />
+              <span>Download PDF</span>
+            </a>
+
+            <a
+              href={cvUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 border border-alabaster/15 px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-slateMuted transition-colors hover:border-alabaster/40 hover:text-alabaster"
+            >
+              <span>Open Tab</span>
+              <ArrowUpRight size={12} />
+            </a>
           </div>
         </div>
 
+        {/* Inline PDF Viewer */}
         {cvOpen && (
-          <div className="mt-8 border border-alabaster/15 bg-surface/80 p-6 md:p-8">
-            <div className="border-b border-alabaster/12 pb-5">
-              <h2 className="font-display text-xl text-alabaster">
-                {PROFILE.name}
-              </h2>
-              <p className="mt-1 font-mono text-xs text-slateMuted">
-                {PROFILE.role} · {PROFILE.affiliation}
-              </p>
+          <div className="mt-7 border border-alabaster/15 bg-surface/90">
+            <div className="flex items-center justify-between border-b border-alabaster/12 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slateMuted">
+              <span>PDF PREVIEW · {PROFILE.contact.cvFileName}</span>
+              <a
+                href={cvUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-alabaster/80 transition-colors hover:text-limeAccent"
+              >
+                <span>Fullscreen</span>
+                <ArrowUpRight size={11} />
+              </a>
             </div>
 
-            <div className="mt-6 space-y-6 text-sm">
-              <div>
-                <h3 className="mono-label text-limeAccent">Education & Experience</h3>
-                <ul className="mt-3 space-y-3">
-                  {PROFILE.timeline.map((item) => (
-                    <li
-                      key={item.period}
-                      className="flex flex-col justify-between gap-1 sm:flex-row"
-                    >
-                      <div>
-                        <span className="font-medium text-alabaster">
-                          {item.role}
-                        </span>
-                        <span className="block text-xs text-slateMuted">
-                          {item.institution}
-                        </span>
-                      </div>
-                      <span className="font-mono text-xs text-slateMuted">
-                        {item.period}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="relative h-[72vh] min-h-[540px] w-full bg-[#181A20]">
+              <iframe
+                src={`${cvUrl}#view=FitH`}
+                title="Alessia Micieli — Curriculum Vitae (PDF)"
+                className="h-full w-full border-0"
+              />
+            </div>
 
-              <div className="border-t border-alabaster/10 pt-5">
-                <h3 className="mono-label text-limeAccent">
-                  Selected Publications
-                </h3>
-                <ul className="mt-3 space-y-3">
-                  {PUBLICATIONS.filter((p) => p.type !== "collaboration").map(
-                    (pub) => (
-                      <li key={pub.id} className="text-alabaster/85">
-                        <span className="font-mono text-[11px] text-slateMuted">
-                          [{pub.venueShort}]{" "}
-                        </span>
-                        {pub.title}
-                      </li>
-                    )
-                  )}
-                </ul>
-              </div>
+            <div className="border-t border-alabaster/10 px-4 py-2.5 text-xs text-slateMuted">
+              If your browser does not render embedded PDFs,{" "}
+              <a
+                href={cvUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-alabaster underline decoration-alabaster/35 underline-offset-4 hover:text-limeAccent"
+              >
+                open the CV in a new tab
+              </a>{" "}
+              or{" "}
+              <a
+                href={cvUrl}
+                download={PROFILE.contact.cvFileName}
+                className="text-alabaster underline decoration-alabaster/35 underline-offset-4 hover:text-limeAccent"
+              >
+                download the PDF directly
+              </a>
+              .
             </div>
           </div>
         )}
