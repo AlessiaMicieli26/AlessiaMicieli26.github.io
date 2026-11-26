@@ -191,14 +191,16 @@ export default function ContactPage() {
                   Selected Publications
                 </h3>
                 <ul className="mt-3 space-y-3">
-                  {PUBLICATIONS.map((pub) => (
-                    <li key={pub.id} className="text-alabaster/85">
-                      <span className="font-mono text-[11px] text-slateMuted">
-                        [{pub.venueShort}]{" "}
-                      </span>
-                      {pub.title}
-                    </li>
-                  ))}
+                  {PUBLICATIONS.filter((p) => p.type !== "collaboration").map(
+                    (pub) => (
+                      <li key={pub.id} className="text-alabaster/85">
+                        <span className="font-mono text-[11px] text-slateMuted">
+                          [{pub.venueShort}]{" "}
+                        </span>
+                        {pub.title}
+                      </li>
+                    )
+                  )}
                 </ul>
               </div>
             </div>

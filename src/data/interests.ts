@@ -170,15 +170,15 @@ export const INTEREST_NODES: InterestNode[] = [
   },
   {
     id: "pub-egoextra",
-    label: "Ego-EXTRA (WACV / arXiv)",
-    shortLabel: "WACV · EGO-EXTRA",
+    label: "Ego-EXTRA (Collaboration)",
+    shortLabel: "COLLAB · EGO-EXTRA",
     kind: "publication",
     x: 130,
     y: 225,
     summary:
-      "IPLab UNICT benchmark paper introducing Ego-EXTRA for expert-trainee egocentric assistance (arXiv:2512.13238).",
+      "Research collaboration within the IPLab UNICT ecosystem (non-author / non-co-author) on egocentric expert-trainee assistance (arXiv:2512.13238).",
     href: "/publications#egoextra-wacv",
-    meta: "LAB ECOSYSTEM · 2026",
+    meta: "COLLABORATION · NON-AUTHOR",
   },
 ];
 

@@ -10,8 +10,8 @@ type FilterKind = "all" | Publication["type"];
 
 const FILTERS: { id: FilterKind; label: string }[] = [
   { id: "all", label: "All Works" },
-  { id: "conference", label: "Conference" },
-  { id: "benchmark", label: "Lab Ecosystem" },
+  { id: "conference", label: "Authored" },
+  { id: "collaboration", label: "Collaborations" },
 ];
 
 export default function PublicationsPage() {
@@ -106,6 +106,17 @@ export default function PublicationsPage() {
                 <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-slateMuted">
                   {pub.status}
                 </p>
+                {pub.roleBadge && (
+                  <span
+                    className={`mt-3 inline-block border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] ${
+                      pub.type === "collaboration"
+                        ? "border-alabaster/25 bg-alabaster/[0.04] text-alabaster/80"
+                        : "border-limeAccent/45 bg-limeAccent/[0.06] text-limeAccent"
+                    }`}
+                  >
+                    {pub.roleBadge}
+                  </span>
+                )}
               </div>
 
               {/* Right Column: Title, Authors, Venue, Abstract & Actions */}
@@ -113,6 +124,12 @@ export default function PublicationsPage() {
                 <h2 className="font-display text-xl font-normal leading-snug tracking-tight text-alabaster md:text-[1.4rem]">
                   {pub.title}
                 </h2>
+
+                {pub.roleNote && (
+                  <p className="mt-2.5 border-l border-alabaster/25 pl-3 font-mono text-[11px] leading-relaxed text-alabaster/75">
+                    {pub.roleNote}
+                  </p>
+                )}
 
                 {/* Authors list with clean personal emphasis */}
                 <p className="mt-3 text-sm leading-relaxed text-slateMuted">

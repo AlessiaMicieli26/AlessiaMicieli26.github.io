@@ -6,8 +6,10 @@ export interface Publication {
   highlightAuthor: string;
   venue: string;
   venueShort: string;
-  type: "conference" | "benchmark";
+  type: "conference" | "collaboration";
   status: string;
+  roleBadge?: string;
+  roleNote?: string;
   abstract: string;
   doi?: string;
   externalUrl?: string;
@@ -32,6 +34,7 @@ export const PUBLICATIONS: Publication[] = [
     venueShort: "VISAPP 2026",
     type: "conference",
     status: "Published · VISAPP 2026",
+    roleBadge: "First Author",
     abstract:
       "We introduce SignIT, a curated multimodal dataset and systematic benchmark for Italian Sign Language (LIS) recognition. Comprising 644 manually annotated videos spanning ~3.33 hours across 94 distinct sign classes organized into five macro-categories (Animals, Food, Colors, Emotions, and Family), SignIT pairs raw RGB visual streams with MediaPipe 2D skeletal keypoints covering hands, face, and body. We evaluate pose-based baselines (K-NN, MLP), convolutional RGB encoders (ResNet18), temporal architectures, and multimodal fusion models, demonstrating how combining articulated kinematics with visual appearance improves recognition reliability.",
     doi: "10.5220/0014480100004084",
@@ -72,12 +75,15 @@ export const PUBLICATIONS: Publication[] = [
       "Antonino Furnari",
       "Giovanni Maria Farinella",
     ],
-    highlightAuthor: "IPLab · UNICT Benchmark",
+    highlightAuthor: "Collaboration · Non-Author",
     venue:
-      "IEEE/CVF Winter Conference on Applications of Computer Vision (WACV) — LIVE@IPLab Research Ecosystem",
+      "IEEE/CVF Winter Conference on Applications of Computer Vision (WACV) — LIVE@IPLab Collaboration",
     venueShort: "WACV / arXiv",
-    type: "benchmark",
-    status: "Lab Ecosystem · arXiv:2512.13238",
+    type: "collaboration",
+    status: "Collaboration · Non-Author",
+    roleBadge: "Collaboration · Non-Author",
+    roleNote:
+      "Research collaboration within the IPLab ecosystem — Alessia Micieli is neither an author nor a co-author of this publication.",
     abstract:
       "Ego-EXTRA is a foundational video-language egocentric dataset developed within the IPLab ecosystem at the University of Catania to study wearable intelligent assistants guiding human trainees through complex procedural tasks. Featuring ~50 hours of unscripted first-person video and over 15,000 visual question-answering pairs collected through an expert-trainee Wizard-of-Oz protocol, it provides key methodological context for egocentric multimodal assistance research.",
     doi: "10.48550/arXiv.2512.13238",
