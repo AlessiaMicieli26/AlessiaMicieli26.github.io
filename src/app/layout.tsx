@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { PersistentShell } from "@/components/layout/PersistentShell";
-import { BASE_PATH, SITE_URL } from "@/lib/siteConfig";
+import { SITE_URL } from "@/lib/siteConfig";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+  metadataBase: new URL(`${SITE_URL}/`),
   title: {
     default: "Alessia Micieli — Research Portfolio",
     template: "%s · Alessia Micieli",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
       "Understanding the world, one perspective at a time. Exploring computer vision, multimodal intelligence and human-centered understanding.",
     images: [
       {
-        url: `${BASE_PATH}/og-card.svg`,
+        url: "og-card.svg",
         width: 1200,
         height: 630,
         alt: "Alessia Micieli — Interactive Research Portfolio",
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     title: "Alessia Micieli — Interactive Research Portfolio",
     description:
       "Exploring computer vision, multimodal intelligence and human-centered understanding.",
-    images: [`${BASE_PATH}/og-card.svg`],
+    images: ["og-card.svg"],
   },
 };
 
