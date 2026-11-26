@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#101114" />
+  <line x1="72" y1="90" x2="1128" y2="90" stroke="#E9E7DF" stroke-opacity="0.12" />
+  <line x1="72" y1="540" x2="1128" y2="540" stroke="#E9E7DF" stroke-opacity="0.12" />
+  <g transform="translate(860 315)" fill="none">
+    <circle r="170" stroke="#E9E7DF" stroke-opacity="0.6" stroke-width="5" />
+    <ellipse cx="38" cy="0" rx="150" ry="62" transform="rotate(-22)" stroke="#B9E66A" stroke-opacity="0.85" stroke-width="4.5" />
+    <ellipse cx="-18" cy="36" rx="64" ry="138" transform="rotate(18)" stroke="#E9E7DF" stroke-opacity="0.45" stroke-width="4" />
+    <ellipse cx="-24" cy="-18" rx="108" ry="48" transform="rotate(42)" stroke="#858991" stroke-opacity="0.7" stroke-width="3.5" />
+  </g>
+  <text x="72" y="190" fill="#B9E66A" font-family="monospace" font-size="16" letter-spacing="4">RESEARCH PORTFOLIO · CATANIA, IT</text>
+  <text x="72" y="270" fill="#E9E7DF" font-family="sans-serif" font-size="56" font-weight="500" letter-spacing="-1">ALESSIA MICIELI</text>
+  <text x="72" y="335" fill="#E9E7DF" fill-opacity="0.88" font-family="sans-serif" font-size="24">“Understanding the world, one perspective at a time.”</text>
+  <text x="72" y="388" fill="#858991" font-family="sans-serif" font-size="18">Computer Vision · Multimodal AI · Egocentric Vision · Human-Centered Understanding</text>
+  <text x="72" y="512" fill="#858991" font-family="monospace" font-size="14" letter-spacing="3">UNIVERSITY OF CATANIA · DMI · IPLAB</text>
+</svg>
