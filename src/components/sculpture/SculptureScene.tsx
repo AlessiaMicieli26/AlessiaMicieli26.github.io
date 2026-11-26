@@ -79,7 +79,7 @@ export function SculptureScene() {
 
         {webglSupported && (
           <Canvas
-            dpr={[1, 2]}
+            dpr={[1, 1.5]}
             camera={{ position: [0, 0, 7.3], fov: 36, near: 0.1, far: 45 }}
             gl={{
               antialias: true,

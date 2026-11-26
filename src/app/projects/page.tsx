@@ -5,11 +5,8 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { PROJECTS } from "@/data/projects";
 import { SectionFrame } from "@/components/editorial/SectionFrame";
-import { usePortfolioStore } from "@/store/portfolioStore";
 
 export default function ProjectsPage() {
-  const triggerPulse = usePortfolioStore((s) => s.triggerPulse);
-
   return (
     <SectionFrame
       sectionId="projects"
@@ -22,7 +19,6 @@ export default function ProjectsPage() {
         {PROJECTS.map((project) => (
           <article
             key={project.slug}
-            onMouseEnter={() => triggerPulse(0.65)}
             className="group py-10 transition-colors"
           >
             <div className="grid grid-cols-1 gap-6 md:grid-cols-12">

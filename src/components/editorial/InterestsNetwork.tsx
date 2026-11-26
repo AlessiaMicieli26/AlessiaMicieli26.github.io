@@ -9,7 +9,6 @@ import {
   InterestNode,
   InterestNodeKind,
 } from "@/data/interests";
-import { usePortfolioStore } from "@/store/portfolioStore";
 
 type LayerFilter = "all" | InterestNodeKind;
 
@@ -41,7 +40,6 @@ export function InterestsNetwork() {
   const [selectedId, setSelectedId] = useState<string>("topic-egocentric");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [layer, setLayer] = useState<LayerFilter>("all");
-  const triggerPulse = usePortfolioStore((s) => s.triggerPulse);
 
   const activeId = hoveredId ?? selectedId;
 
@@ -75,7 +73,6 @@ export function InterestsNetwork() {
 
   const handleSelect = (id: string) => {
     setSelectedId(id);
-    triggerPulse(0.7);
   };
 
   return (

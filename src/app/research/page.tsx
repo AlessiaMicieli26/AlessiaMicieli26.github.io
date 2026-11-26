@@ -7,17 +7,14 @@ import { RESEARCH_DIRECTIONS } from "@/data/research";
 import { PROJECTS } from "@/data/projects";
 import { PUBLICATIONS } from "@/data/publications";
 import { SectionFrame } from "@/components/editorial/SectionFrame";
-import { usePortfolioStore } from "@/store/portfolioStore";
 
 export default function ResearchPage() {
   const [expandedId, setExpandedId] = useState<string>(
     RESEARCH_DIRECTIONS[0].id
   );
-  const triggerPulse = usePortfolioStore((s) => s.triggerPulse);
 
   const toggleDirection = (id: string) => {
     setExpandedId((prev) => (prev === id ? "" : id));
-    triggerPulse(0.75);
   };
 
   return (
@@ -39,7 +36,6 @@ export default function ResearchPage() {
             href={`#${dir.id}`}
             onClick={() => {
               setExpandedId(dir.id);
-              triggerPulse(0.6);
             }}
             className="font-mono text-[11px] uppercase tracking-[0.12em] text-slateMuted transition-colors hover:text-limeAccent"
           >

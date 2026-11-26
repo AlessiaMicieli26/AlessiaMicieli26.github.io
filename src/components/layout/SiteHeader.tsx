@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { ArrowLeft, Menu, X } from "lucide-react";
 import { NAV_SECTIONS } from "@/lib/sculptureConfig";
 import { usePortfolioStore } from "@/store/portfolioStore";
 
@@ -21,7 +21,7 @@ export function SiteHeader() {
       className={`fixed inset-x-0 top-0 z-40 transition-colors duration-500 ${
         isHome
           ? "bg-transparent"
-          : "border-b border-alabaster/10 bg-obsidian/80 backdrop-blur-[2px]"
+          : "border-b border-alabaster/10 bg-obsidian/85 backdrop-blur-[2px]"
       }`}
     >
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-5 md:h-20 md:px-10">
@@ -51,11 +51,25 @@ export function SiteHeader() {
           )}
         </div>
 
-        {/* Right: Accessible conventional navigation + motion control */}
+        {/* Right: Accessible conventional navigation + dynamic Home button on inner pages */}
         <nav
           aria-label="Primary navigation"
-          className="hidden items-center gap-7 lg:flex"
+          className="hidden items-center gap-6 lg:flex"
         >
+          {!isHome && (
+            <Link
+              href="/"
+              onClick={() => setPreviewSection(null)}
+              className="group inline-flex items-center gap-1.5 border border-limeAccent/45 bg-limeAccent/[0.06] px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-limeAccent transition-colors duration-200 hover:border-limeAccent hover:bg-limeAccent/15"
+            >
+              <ArrowLeft
+                size={11}
+                className="transition-transform group-hover:-translate-x-0.5"
+              />
+              <span>Home</span>
+            </Link>
+          )}
+
           {NAV_SECTIONS.map((item) => {
             const active = activeSection === item.id;
             return (
@@ -103,8 +117,21 @@ export function SiteHeader() {
           </button>
         </nav>
 
-        {/* Mobile menu trigger */}
-        <div className="flex items-center gap-3 lg:hidden">
+        {/* Mobile bar: dynamic Home button + menu trigger */}
+        <div className="flex items-center gap-2.5 lg:hidden">
+          {!isHome && (
+            <Link
+              href="/"
+              onClick={() => {
+                setPreviewSection(null);
+                setMobileMenuOpen(false);
+              }}
+              className="inline-flex items-center gap-1 border border-limeAccent/45 bg-limeAccent/[0.06] px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-limeAccent"
+            >
+              <ArrowLeft size={11} />
+              <span>Home</span>
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => setReducedMotion(!reducedMotion)}
@@ -117,7 +144,9 @@ export function SiteHeader() {
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
             className="inline-flex h-9 w-9 items-center justify-center border border-alabaster/15 text-alabaster transition-colors hover:border-alabaster/40"
-            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-label={
+              mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"
+            }
             aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
@@ -136,7 +165,7 @@ export function SiteHeader() {
                 isHome ? "text-limeAccent" : "text-alabaster/80"
               }`}
             >
-              <span>00 / Origin — Sculpture</span>
+              <span>00 / Home — Origin Sculpture</span>
               <span className="text-[10px] text-slateMuted">HOME</span>
             </Link>
             {NAV_SECTIONS.map((item) => {
@@ -157,7 +186,7 @@ export function SiteHeader() {
                     {item.label}
                   </span>
                   <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-slateMuted">
-                    {item.materialLabel.split(" ")[0]}
+                    {item.geometryLabel}
                   </span>
                 </Link>
               );

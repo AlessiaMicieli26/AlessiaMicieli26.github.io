@@ -102,7 +102,7 @@ interface InterlockingRingsProps {
 }
 
 export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
-  const { gl, size, pointer } = useThree();
+  const { gl, size } = useThree();
 
   const rootGroupRef = useRef<THREE.Group>(null);
   const assemblyGroupRef = useRef<THREE.Group>(null);
@@ -125,29 +125,17 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
   const rimLightRef = useRef<THREE.DirectionalLight>(null);
   const ambientLightRef = useRef<THREE.AmbientLight>(null);
 
-  // Interactive drag, per-ring impulses & kinetic physics (stored in refs for 60fps zero-re-render loop)
+  // Unified, continuous rotation & drag state (never jumps on hover, scroll, or route change)
   const kinetic = useRef({
     dragging: false,
     lastX: 0,
     lastY: 0,
     totalTravel: 0,
-    // Homepage orbital angles
     yaw: -0.42,
     pitch: 0.34,
     velYaw: 0,
     velPitch: 0,
-    // Inner-page interactive user offset (so dragging works smoothly on EVERY page!)
-    innerOffsetYaw: 0,
-    innerOffsetPitch: 0,
-    innerVelYaw: 0,
-    innerVelPitch: 0,
-    // Per-ring tactile spin impulse & click-nudge feedback
-    ringImpulses: [0, 0, 0, 0] as [number, number, number, number],
-    ringHoverBoost: [0, 0, 0, 0] as [number, number, number, number],
     lastReportedAzimuth: -1,
-    lastPulseSeen: 0,
-    lastSectionSeen: "home",
-    impulseSpin: 0,
   });
 
   // Reusable scratch vectors/quaternions/colors (zero GC in useFrame)
@@ -182,10 +170,17 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
     };
   }, [textures]);
 
-  // Custom machined ring geometries + shared micro-geometries for ticks, connectors & nodes
+  // Optimized machined ring geometries (112 smooth radial segments for silky 60fps across all GPUs)
   const ringAssets = useMemo(() => {
     const tickBox = new THREE.BoxGeometry(1, 1, 1);
-    const connectorCyl = new THREE.CylinderGeometry(0.0055, 0.0055, 1, 8, 1, false);
+    const connectorCyl = new THREE.CylinderGeometry(
+      0.0055,
+      0.0055,
+      1,
+      6,
+      1,
+      false
+    );
     const anchorNodeGeo = new THREE.OctahedronGeometry(0.036, 0);
     const axisCyl = new THREE.CylinderGeometry(0.0038, 0.0038, 4.9, 6, 1, false);
     const items = RING_SPECS.map((spec) => ({
@@ -194,13 +189,13 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
         spec.bandWidth,
         spec.thickness,
         spec.style,
-        160
+        112
       ),
       inlayGeo: createRingInlayGeometry(
         spec.radius,
         spec.bandWidth,
         spec.thickness,
-        160
+        112
       ),
       tickMatrices: buildGraduationMatrices(
         spec.radius,
@@ -229,7 +224,7 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
         ),
         clearcoat: initial.clearcoat,
         clearcoatRoughness: initial.clearcoatRoughness,
-        transmission: initial.transmission,
+        transmission: 0,
         iridescence: initial.iridescence,
         iridescenceIOR: 1.38,
         ior: initial.ior,
@@ -333,7 +328,7 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
     };
   }, [ringAssets, materials]);
 
-  // Pointer drag listeners attached to the WebGL canvas element (WORKS ON EVERY PAGE!)
+  // Click-and-drag mouse/touch rotation (ONLY responds when actively pressed & dragged!)
   useEffect(() => {
     const dom = gl.domElement;
 
@@ -344,47 +339,31 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
       kinetic.current.lastX = e.clientX;
       kinetic.current.lastY = e.clientY;
       kinetic.current.totalTravel = 0;
-
+      kinetic.current.velYaw = 0;
+      kinetic.current.velPitch = 0;
       if (state.activeSection === "home") {
-        kinetic.current.velYaw = 0;
-        kinetic.current.velPitch = 0;
         state.requestAzimuth(null);
-      } else {
-        kinetic.current.innerVelYaw = 0;
-        kinetic.current.innerVelPitch = 0;
       }
       state.setIsDragging(true);
     };
 
     const onPointerMove = (e: PointerEvent) => {
       if (!kinetic.current.dragging) return;
-      const state = usePortfolioStore.getState();
       const dx = e.clientX - kinetic.current.lastX;
       const dy = e.clientY - kinetic.current.lastY;
       kinetic.current.lastX = e.clientX;
       kinetic.current.lastY = e.clientY;
       kinetic.current.totalTravel += Math.hypot(dx, dy);
 
-      const sensitivity = 0.0072;
-      if (state.activeSection === "home") {
-        kinetic.current.yaw += dx * sensitivity;
-        kinetic.current.pitch = THREE.MathUtils.clamp(
-          kinetic.current.pitch + dy * sensitivity * 0.72,
-          -1.05,
-          1.05
-        );
-        kinetic.current.velYaw = dx * sensitivity * 0.6;
-        kinetic.current.velPitch = dy * sensitivity * 0.35;
-      } else {
-        kinetic.current.innerOffsetYaw += dx * sensitivity * 1.15;
-        kinetic.current.innerOffsetPitch = THREE.MathUtils.clamp(
-          kinetic.current.innerOffsetPitch + dy * sensitivity * 0.85,
-          -1.15,
-          1.15
-        );
-        kinetic.current.innerVelYaw = dx * sensitivity * 0.65;
-        kinetic.current.innerVelPitch = dy * sensitivity * 0.35;
-      }
+      const sensitivity = 0.008;
+      kinetic.current.yaw += dx * sensitivity;
+      kinetic.current.pitch = THREE.MathUtils.clamp(
+        kinetic.current.pitch + dy * sensitivity * 0.85,
+        -1.25,
+        1.25
+      );
+      kinetic.current.velYaw = dx * sensitivity * 0.55;
+      kinetic.current.velPitch = dy * sensitivity * 0.35;
     };
 
     const onPointerUp = () => {
@@ -406,21 +385,22 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
     };
   }, [gl]);
 
-  // Cursor feedback across ALL pages
+  // Cursor feedback
   const hoveredRing = usePortfolioStore((s) => s.hoveredRing);
   const isDragging = usePortfolioStore((s) => s.isDragging);
+  const activeSection = usePortfolioStore((s) => s.activeSection);
   useEffect(() => {
     const dom = gl.domElement;
     if (isDragging) {
       dom.style.cursor = "grabbing";
-    } else if (hoveredRing !== null) {
+    } else if (activeSection === "home" && hoveredRing !== null) {
       dom.style.cursor = "pointer";
     } else {
       dom.style.cursor = "grab";
     }
-  }, [gl, hoveredRing, isDragging]);
+  }, [gl, hoveredRing, isDragging, activeSection]);
 
-  // 60fps animation, smooth geometric morphing, material/lighting interpolation & connector tracking
+  // Smooth 60fps loop: continuous self-rotation when idle, direct drag-follow when pressed
   useFrame((state, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);
     const t = state.clock.elapsedTime;
@@ -430,31 +410,7 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
     const isMobile = size.width < 768;
     const motionFactor = store.reducedMotion ? 0.12 : 1.0;
 
-    // Reset manual inner-page rotation offset gently when navigating to a new section
-    if (store.activeSection !== kinetic.current.lastSectionSeen) {
-      kinetic.current.lastSectionSeen = store.activeSection;
-      kinetic.current.innerOffsetYaw = 0;
-      kinetic.current.innerOffsetPitch = 0;
-      kinetic.current.innerVelYaw = 0;
-      kinetic.current.innerVelPitch = 0;
-    }
-
-    // External interaction pulses (hovering project rows, graph nodes, or clicking HUD)
-    if (store.interactionPulse !== kinetic.current.lastPulseSeen) {
-      kinetic.current.lastPulseSeen = store.interactionPulse;
-      kinetic.current.impulseSpin = Math.min(
-        kinetic.current.impulseSpin + 0.85,
-        2.0
-      );
-    }
-    kinetic.current.impulseSpin = THREE.MathUtils.damp(
-      kinetic.current.impulseSpin,
-      0,
-      2.6,
-      delta
-    );
-
-    // Visual preset: on Home, live-preview both material AND geometric configuration when rotating/hovering!
+    // On Home, live-preview hovered/selected perspective; on inner pages, stay strictly on activeSection
     const visualSectionId =
       isHome && store.previewSection
         ? store.previewSection
@@ -462,7 +418,7 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
     const preset = SCULPTURE_PRESETS[visualSectionId];
     const layoutPreset = SCULPTURE_PRESETS[store.activeSection];
 
-    // 1. Spatial Position & Scale across sections
+    // 1. Spatial Position & Scale across sections (no scroll jitter)
     const root = rootGroupRef.current;
     if (root) {
       const targetPos = isMobile
@@ -472,104 +428,99 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
         ? layoutPreset.mobileScale
         : layoutPreset.desktopScale;
 
-      const scrollYOffset = isHome ? 0 : (store.scrollProgress - 0.5) * -0.4;
-      const organicFloatY =
-        Math.sin(t * 0.7) * preset.organicAmplitude * 0.8 * motionFactor;
-
       root.position.x = THREE.MathUtils.damp(
         root.position.x,
         targetPos[0],
-        3.4,
+        3.6,
         delta
       );
       root.position.y = THREE.MathUtils.damp(
         root.position.y,
-        targetPos[1] + scrollYOffset + organicFloatY,
-        3.4,
+        targetPos[1],
+        3.6,
         delta
       );
       root.position.z = THREE.MathUtils.damp(
         root.position.z,
         targetPos[2],
-        3.4,
+        3.6,
         delta
       );
 
       const nextScale = THREE.MathUtils.damp(
         root.scale.x,
         targetScale,
-        3.6,
+        3.8,
         delta
       );
       root.scale.setScalar(nextScale);
     }
 
-    // Smooth centroid offset for visually centered pivoting across all 7 geometric configurations
+    // Smooth centroid offset for centered pivoting across all 7 geometric configurations
     if (centroidGroupRef.current) {
       centroidGroupRef.current.position.x = THREE.MathUtils.damp(
         centroidGroupRef.current.position.x,
         preset.centroidOffset[0],
-        3.4,
+        3.6,
         delta
       );
       centroidGroupRef.current.position.y = THREE.MathUtils.damp(
         centroidGroupRef.current.position.y,
         preset.centroidOffset[1],
-        3.4,
+        3.6,
         delta
       );
       centroidGroupRef.current.position.z = THREE.MathUtils.damp(
         centroidGroupRef.current.position.z,
         preset.centroidOffset[2],
-        3.4,
+        3.6,
         delta
       );
     }
 
-    // 2. Collective Assembly Rotation (full interactive drag + momentum on Home AND inner pages!)
+    // 2. Collective Assembly Rotation — strictly click-drag controlled, otherwise steady self-rotation
     const assembly = assemblyGroupRef.current;
     if (assembly) {
-      if (isHome) {
-        if (!kinetic.current.dragging) {
-          if (store.requestedAzimuthDeg !== null) {
-            const targetYaw = (store.requestedAzimuthDeg * Math.PI) / 180;
-            let diff = targetYaw - kinetic.current.yaw;
-            diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-            kinetic.current.yaw += diff * (1 - Math.exp(-5.2 * delta));
-            kinetic.current.pitch = THREE.MathUtils.damp(
-              kinetic.current.pitch,
-              preset.assemblyRotation[0],
-              4.0,
-              delta
-            );
-            if (Math.abs(diff) < 0.008) {
-              store.requestAzimuth(null);
-            }
-          } else {
-            kinetic.current.yaw += kinetic.current.velYaw;
-            kinetic.current.pitch = THREE.MathUtils.clamp(
-              kinetic.current.pitch + kinetic.current.velPitch,
-              -1.05,
-              1.05
-            );
-            kinetic.current.velYaw *= Math.exp(-4.2 * delta);
-            kinetic.current.velPitch *= Math.exp(-4.2 * delta);
-
-            if (store.hoveredRing === null) {
-              kinetic.current.yaw +=
-                preset.assemblySpinSpeed * delta * motionFactor;
-            }
+      if (!kinetic.current.dragging) {
+        if (isHome && store.requestedAzimuthDeg !== null) {
+          const targetYaw = (store.requestedAzimuthDeg * Math.PI) / 180;
+          let diff = targetYaw - kinetic.current.yaw;
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          kinetic.current.yaw += diff * (1 - Math.exp(-5.0 * delta));
+          kinetic.current.pitch = THREE.MathUtils.damp(
+            kinetic.current.pitch,
+            preset.assemblyRotation[0],
+            4.0,
+            delta
+          );
+          if (Math.abs(diff) < 0.008) {
+            store.requestAzimuth(null);
           }
+        } else {
+          // Smooth inertia release + continuous steady self-rotation
+          kinetic.current.yaw +=
+            kinetic.current.velYaw +
+            preset.assemblySpinSpeed * 1.45 * delta * motionFactor;
+          kinetic.current.pitch = THREE.MathUtils.clamp(
+            kinetic.current.pitch + kinetic.current.velPitch,
+            -1.25,
+            1.25
+          );
+          kinetic.current.velYaw *= Math.exp(-4.5 * delta);
+          kinetic.current.velPitch *= Math.exp(-4.5 * delta);
         }
+      }
 
+      // Report homepage azimuth compass cleanly (only on Home)
+      if (isHome) {
         const rawDeg = ((kinetic.current.yaw * 180) / Math.PI) % 360;
         const normDeg = (rawDeg + 360) % 360;
-        if (Math.abs(normDeg - kinetic.current.lastReportedAzimuth) > 0.6) {
+        if (Math.abs(normDeg - kinetic.current.lastReportedAzimuth) > 0.8) {
           kinetic.current.lastReportedAzimuth = normDeg;
           store.setAzimuthDeg(normDeg);
           if (
             kinetic.current.dragging ||
-            Math.abs(kinetic.current.velYaw) > 0.003
+            Math.abs(kinetic.current.velYaw) > 0.004
           ) {
             const aligned = azimuthToNavSection(normDeg);
             if (store.previewSection !== aligned.id) {
@@ -577,89 +528,31 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
             }
           }
         }
-
-        const pointerTiltX = -pointer.y * 0.14 * motionFactor;
-        const pointerTiltY = pointer.x * 0.18 * motionFactor;
-
-        assembly.rotation.x = THREE.MathUtils.damp(
-          assembly.rotation.x,
-          kinetic.current.pitch + pointerTiltX,
-          6.0,
-          delta
-        );
-        assembly.rotation.y = THREE.MathUtils.damp(
-          assembly.rotation.y,
-          kinetic.current.yaw + pointerTiltY,
-          6.0,
-          delta
-        );
-        assembly.rotation.z = THREE.MathUtils.damp(
-          assembly.rotation.z,
-          preset.assemblyRotation[2] +
-            Math.sin(t * 0.45) * preset.organicAmplitude * motionFactor,
-          3.2,
-          delta
-        );
-      } else {
-        // Inner pages: interactive drag inertia + deliberate section cadence + scroll sync
-        if (!kinetic.current.dragging) {
-          kinetic.current.innerOffsetYaw += kinetic.current.innerVelYaw;
-          kinetic.current.innerOffsetPitch = THREE.MathUtils.clamp(
-            kinetic.current.innerOffsetPitch + kinetic.current.innerVelPitch,
-            -1.15,
-            1.15
-          );
-          kinetic.current.innerVelYaw *= Math.exp(-3.8 * delta);
-          kinetic.current.innerVelPitch *= Math.exp(-3.8 * delta);
-        }
-
-        const scrollYaw = store.scrollProgress * 0.95;
-        const continuousDrift =
-          store.hoveredRing === null && !kinetic.current.dragging
-            ? t * preset.assemblySpinSpeed * motionFactor
-            : t * preset.assemblySpinSpeed * 0.25 * motionFactor;
-
-        const targetX =
-          preset.assemblyRotation[0] +
-          kinetic.current.innerOffsetPitch +
-          Math.sin(t * 0.4) * preset.organicAmplitude * motionFactor -
-          pointer.y * 0.07 * motionFactor;
-        const targetY =
-          preset.assemblyRotation[1] +
-          kinetic.current.innerOffsetYaw +
-          scrollYaw +
-          continuousDrift +
-          pointer.x * 0.09 * motionFactor;
-        const targetZ =
-          preset.assemblyRotation[2] +
-          Math.cos(t * 0.35) * preset.organicAmplitude * 0.75 * motionFactor;
-
-        const dampRate = kinetic.current.dragging ? 12.0 : 4.2;
-        assembly.rotation.x = THREE.MathUtils.damp(
-          assembly.rotation.x,
-          targetX,
-          dampRate,
-          delta
-        );
-        assembly.rotation.y = THREE.MathUtils.damp(
-          assembly.rotation.y,
-          targetY,
-          dampRate,
-          delta
-        );
-        assembly.rotation.z = THREE.MathUtils.damp(
-          assembly.rotation.z,
-          targetZ,
-          3.2,
-          delta
-        );
-
-        kinetic.current.yaw = assembly.rotation.y;
-        kinetic.current.pitch = preset.assemblyRotation[0];
       }
+
+      // Silky responsive damping when dragging, smooth continuous motion when rotating freely
+      const followRate = kinetic.current.dragging ? 15.0 : 8.0;
+      assembly.rotation.x = THREE.MathUtils.damp(
+        assembly.rotation.x,
+        kinetic.current.pitch,
+        followRate,
+        delta
+      );
+      assembly.rotation.y = THREE.MathUtils.damp(
+        assembly.rotation.y,
+        kinetic.current.yaw,
+        followRate,
+        delta
+      );
+      assembly.rotation.z = THREE.MathUtils.damp(
+        assembly.rotation.z,
+        preset.assemblyRotation[2],
+        3.2,
+        delta
+      );
     }
 
-    // 3. Per-Ring Geometric Morphing (Position, Axis Rotation, Scale) + Individual Spin + PBR Materials
+    // 3. Per-Ring Geometric Morphing + Continuous Independent Spin + PBR Material Interpolation
     scratch.baseCol.set(preset.baseColor);
     scratch.secCol.set(preset.secondaryColor);
     scratch.accentCol.set(preset.accentColor);
@@ -671,57 +564,17 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
       const pivot = ringPivotRefs.current[idx];
       const spin = ringSpinRefs.current[idx];
       const pose = preset.ringPoses[idx];
-      const isHovered = store.hoveredRing === idx;
-      const isSectionHighlighted = primaryRingForSection === idx;
+      const isHovered = isHome && store.hoveredRing === idx;
+      const isSectionHighlighted = isHome && primaryRingForSection === idx;
 
-      // Decay individual tactile click impulse smoothly
-      kinetic.current.ringImpulses[idx] = THREE.MathUtils.damp(
-        kinetic.current.ringImpulses[idx],
-        0,
-        2.8,
-        delta
-      );
-      kinetic.current.ringHoverBoost[idx] = THREE.MathUtils.damp(
-        kinetic.current.ringHoverBoost[idx],
-        isHovered ? 1 : 0,
-        7.5,
-        delta
-      );
-
-      const hoverAmt = kinetic.current.ringHoverBoost[idx];
-      const individualImpulse = kinetic.current.ringImpulses[idx];
-
-      // Individual ring spin around its local normal axis (Z)
+      // Continuous steady spin around each ring's own normal axis
       if (spin) {
-        const baseSpeed = preset.ringSpinSpeeds[idx];
-        const hoverSpin = hoverAmt * 0.42;
-        const globalImpulse =
-          kinetic.current.impulseSpin * (idx % 2 === 0 ? 0.55 : -0.65);
-        spin.rotation.z +=
-          (baseSpeed + hoverSpin + globalImpulse + individualImpulse) *
-          delta *
-          motionFactor;
+        spin.rotation.z += preset.ringSpinSpeeds[idx] * delta * motionFactor;
       }
 
-      // Smooth geometric morphing of each ring's position, axis orientation, and scale!
+      // Smooth geometric morphing between section configurations
       if (pivot) {
-        const phase = idx * 1.57;
-        const microPrecess =
-          Math.sin(t * preset.precessionSpeed + phase) *
-          Math.min(preset.organicAmplitude * 0.45, 0.03) *
-          motionFactor;
-        const breathOffset =
-          Math.cos(t * preset.precessionSpeed * 0.8 + phase) *
-          preset.organicAmplitude *
-          0.35 *
-          motionFactor;
-
-        // Subtle tactile expansion when hovered or spun by click
-        const tactileScale =
-          pose.scale *
-          (1 + hoverAmt * 0.042 + Math.min(Math.abs(individualImpulse), 1.5) * 0.015);
-        const morphRate = 3.2;
-
+        const morphRate = 3.4;
         pivot.position.x = THREE.MathUtils.damp(
           pivot.position.x,
           pose.position[0],
@@ -730,7 +583,7 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
         );
         pivot.position.y = THREE.MathUtils.damp(
           pivot.position.y,
-          pose.position[1] + breathOffset,
+          pose.position[1],
           morphRate,
           delta
         );
@@ -743,13 +596,13 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
 
         pivot.rotation.x = THREE.MathUtils.damp(
           pivot.rotation.x,
-          pose.rotation[0] + microPrecess,
+          pose.rotation[0],
           morphRate,
           delta
         );
         pivot.rotation.y = THREE.MathUtils.damp(
           pivot.rotation.y,
-          pose.rotation[1] + microPrecess * 0.7,
+          pose.rotation[1],
           morphRate,
           delta
         );
@@ -762,8 +615,8 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
 
         const nextRingScale = THREE.MathUtils.damp(
           pivot.scale.x,
-          tactileScale,
-          4.5,
+          pose.scale * (isHovered ? 1.03 : 1.0),
+          4.2,
           delta
         );
         pivot.scale.setScalar(nextRingScale);
@@ -774,11 +627,11 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
       scratch.ringTargetCol
         .copy(scratch.baseCol)
         .lerp(scratch.secCol, spec.toneBias);
-      if (hoverAmt > 0.01) {
-        scratch.ringTargetCol.lerp(scratch.tickBaseCol, 0.16 * hoverAmt);
+      if (isHovered) {
+        scratch.ringTargetCol.lerp(scratch.tickBaseCol, 0.14);
       }
 
-      const matSpeed = 3.2;
+      const matSpeed = 3.4;
       bodyMat.color.lerp(scratch.ringTargetCol, 1 - Math.exp(-matSpeed * delta));
       bodyMat.metalness = THREE.MathUtils.damp(
         bodyMat.metalness,
@@ -786,14 +639,13 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
         matSpeed,
         delta
       );
-      const targetRough = THREE.MathUtils.clamp(
-        preset.roughness + spec.roughnessOffset - hoverAmt * 0.05,
-        0.07,
-        0.92
-      );
       bodyMat.roughness = THREE.MathUtils.damp(
         bodyMat.roughness,
-        targetRough,
+        THREE.MathUtils.clamp(
+          preset.roughness + spec.roughnessOffset,
+          0.07,
+          0.92
+        ),
         matSpeed,
         delta
       );
@@ -809,16 +661,20 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
         matSpeed,
         delta
       );
-      bodyMat.transmission = THREE.MathUtils.damp(
+
+      // Clamp near-zero transmission to exact 0 so GPU skips expensive refraction pass on metallic sections
+      const dampedTrans = THREE.MathUtils.damp(
         bodyMat.transmission,
         preset.transmission,
-        2.6,
+        3.0,
         delta
       );
+      bodyMat.transmission = dampedTrans < 0.01 ? 0 : dampedTrans;
+
       bodyMat.iridescence = THREE.MathUtils.damp(
         bodyMat.iridescence,
         preset.iridescence,
-        2.8,
+        3.0,
         delta
       );
       bodyMat.ior = THREE.MathUtils.damp(bodyMat.ior, preset.ior, 3.0, delta);
@@ -836,36 +692,30 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
       );
       bodyMat.envMapIntensity = THREE.MathUtils.damp(
         bodyMat.envMapIntensity,
-        preset.envMapIntensity + hoverAmt * 0.35,
+        preset.envMapIntensity + (isHovered ? 0.25 : 0),
         3.4,
         delta
       );
 
       // Machined inlay groove material
       const inlayMat = materials.inlays[idx];
-      const inlayTargetCol =
-        hoverAmt > 0.25 || Math.abs(individualImpulse) > 0.4
-          ? scratch.hoverLime
-          : scratch.accentCol;
-      inlayMat.color.lerp(inlayTargetCol, 1 - Math.exp(-4.5 * delta));
-      inlayMat.emissive.lerp(inlayTargetCol, 1 - Math.exp(-4.5 * delta));
+      const inlayTargetCol = isHovered ? scratch.hoverLime : scratch.accentCol;
+      inlayMat.color.lerp(inlayTargetCol, 1 - Math.exp(-4.0 * delta));
+      inlayMat.emissive.lerp(inlayTargetCol, 1 - Math.exp(-4.0 * delta));
 
-      const pulseBoost =
-        kinetic.current.impulseSpin * 0.25 +
-        Math.min(Math.abs(individualImpulse), 2.0) * 0.45;
-      let targetEmissive = preset.accentEmissiveIntensity + pulseBoost;
+      let targetEmissive = preset.accentEmissiveIntensity;
       if (isHovered) {
-        targetEmissive = Math.max(targetEmissive, 1.35);
+        targetEmissive = Math.max(targetEmissive, 1.15);
       } else if (visualSectionId === "projects" && (idx === 3 || idx === 1)) {
         targetEmissive = preset.accentEmissiveIntensity * 1.15;
-      } else if (isSectionHighlighted && isHome) {
-        targetEmissive = Math.max(targetEmissive, 0.28);
+      } else if (isSectionHighlighted) {
+        targetEmissive = Math.max(targetEmissive, 0.26);
       }
 
       inlayMat.emissiveIntensity = THREE.MathUtils.damp(
         inlayMat.emissiveIntensity,
         targetEmissive,
-        4.6,
+        4.2,
         delta
       );
 
@@ -877,10 +727,16 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
       tickMat.color.lerp(tickTarget, 1 - Math.exp(-3.0 * delta));
     });
 
-    // 4. Dynamic Geometric Connections (live-tracks separated rings in Projects & Interests!)
+    // 4. Dynamic Geometric Connections (live-tracks separated rings in Projects & Interests)
     scratch.connCol.set(preset.connectionColor);
-    materials.connectorMat.color.lerp(scratch.connCol, 1 - Math.exp(-3.5 * delta));
-    materials.connectorMat.emissive.lerp(scratch.connCol, 1 - Math.exp(-3.5 * delta));
+    materials.connectorMat.color.lerp(
+      scratch.connCol,
+      1 - Math.exp(-3.5 * delta)
+    );
+    materials.connectorMat.emissive.lerp(
+      scratch.connCol,
+      1 - Math.exp(-3.5 * delta)
+    );
     materials.connectorMat.opacity = THREE.MathUtils.damp(
       materials.connectorMat.opacity,
       preset.connectionOpacity,
@@ -888,29 +744,31 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
       delta
     );
 
-    materials.nodeMat.emissive.lerp(scratch.connCol, 1 - Math.exp(-3.5 * delta));
+    materials.nodeMat.emissive.lerp(
+      scratch.connCol,
+      1 - Math.exp(-3.5 * delta)
+    );
     materials.nodeMat.opacity = THREE.MathUtils.damp(
       materials.nodeMat.opacity,
-      preset.connectionOpacity > 0.05 ? Math.min(preset.connectionOpacity + 0.15, 0.95) : 0,
+      preset.connectionOpacity > 0.05
+        ? Math.min(preset.connectionOpacity + 0.15, 0.95)
+        : 0,
       3.0,
       delta
     );
 
     const connectorsVisible = materials.connectorMat.opacity > 0.015;
     if (connectorsVisible) {
-      // Position micro-nodes at each ring's live center
       for (let i = 0; i < 4; i++) {
         const pivot = ringPivotRefs.current[i];
         const nodeMesh = nodeMeshRefs.current[i];
         if (pivot && nodeMesh) {
           nodeMesh.visible = true;
           nodeMesh.position.copy(pivot.position);
-          nodeMesh.rotation.y = t * 0.6 + i;
-          nodeMesh.rotation.x = t * 0.4;
+          nodeMesh.rotation.y = t * 0.5 + i;
         }
       }
 
-      // Align & scale each precision cylinder between connected ring centers
       CONNECTOR_PAIRS.forEach(([aIdx, bIdx], cIdx) => {
         const pA = ringPivotRefs.current[aIdx];
         const pB = ringPivotRefs.current[bIdx];
@@ -944,7 +802,7 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
       });
     }
 
-    // 5. Precision Calibration Axes (emerge subtly in Research orthogonal mode)
+    // 5. Precision Calibration Axes (Research orthogonal mode)
     materials.axisMat.opacity = THREE.MathUtils.damp(
       materials.axisMat.opacity,
       preset.axisOpacity,
@@ -959,7 +817,10 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
     const lightSpeed = 2.8;
     if (keyLightRef.current) {
       scratch.keyCol.set(preset.keyLightColor);
-      keyLightRef.current.color.lerp(scratch.keyCol, 1 - Math.exp(-lightSpeed * delta));
+      keyLightRef.current.color.lerp(
+        scratch.keyCol,
+        1 - Math.exp(-lightSpeed * delta)
+      );
       keyLightRef.current.intensity = THREE.MathUtils.damp(
         keyLightRef.current.intensity,
         preset.keyLightIntensity,
@@ -988,7 +849,10 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
 
     if (fillLightRef.current) {
       scratch.fillCol.set(preset.fillLightColor);
-      fillLightRef.current.color.lerp(scratch.fillCol, 1 - Math.exp(-lightSpeed * delta));
+      fillLightRef.current.color.lerp(
+        scratch.fillCol,
+        1 - Math.exp(-lightSpeed * delta)
+      );
       fillLightRef.current.intensity = THREE.MathUtils.damp(
         fillLightRef.current.intensity,
         preset.fillLightIntensity,
@@ -1017,7 +881,10 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
 
     if (rimLightRef.current) {
       scratch.rimCol.set(preset.rimLightColor);
-      rimLightRef.current.color.lerp(scratch.rimCol, 1 - Math.exp(-lightSpeed * delta));
+      rimLightRef.current.color.lerp(
+        scratch.rimCol,
+        1 - Math.exp(-lightSpeed * delta)
+      );
       rimLightRef.current.intensity = THREE.MathUtils.damp(
         rimLightRef.current.intensity,
         preset.rimLightIntensity,
@@ -1054,47 +921,35 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
     }
   });
 
-  // Ring interaction handlers (Home AND inner pages!)
+  // Ring hover & click handlers (Home navigation only; inner pages stay purely smooth click-and-drag)
   const handleRingPointerOver = (
     e: ThreeEvent<PointerEvent>,
     spec: RingSpec
   ) => {
-    e.stopPropagation();
     const state = usePortfolioStore.getState();
+    if (state.activeSection !== "home") return;
+    e.stopPropagation();
     state.setHoveredRing(spec.id);
-    if (state.activeSection === "home" && !kinetic.current.dragging) {
+    if (!kinetic.current.dragging) {
       state.setPreviewSection(spec.sectionId);
     }
   };
 
   const handleRingPointerOut = (e: ThreeEvent<PointerEvent>, id: number) => {
-    e.stopPropagation();
     const state = usePortfolioStore.getState();
+    if (state.activeSection !== "home") return;
+    e.stopPropagation();
     if (state.hoveredRing === id) {
       state.setHoveredRing(null);
     }
   };
 
   const handleRingClick = (e: ThreeEvent<MouseEvent>, spec: RingSpec) => {
+    const state = usePortfolioStore.getState();
+    if (state.activeSection !== "home") return;
     e.stopPropagation();
     if (kinetic.current.totalTravel > 7) return;
-    const state = usePortfolioStore.getState();
-    if (state.activeSection === "home") {
-      onNavigate(spec.sectionHref);
-    } else {
-      // Tactile individual ring kinetic spin impulse on click!
-      const dir = spec.id % 2 === 0 ? 1 : -1;
-      kinetic.current.ringImpulses[spec.id] = dir * 4.2;
-      state.triggerPulse(0.6);
-    }
-  };
-
-  const handleRingDoubleClick = (e: ThreeEvent<MouseEvent>, spec: RingSpec) => {
-    e.stopPropagation();
-    const state = usePortfolioStore.getState();
-    if (state.activeSection !== "home" && state.activeSection !== spec.sectionId) {
-      onNavigate(spec.sectionHref);
-    }
+    onNavigate(spec.sectionHref);
   };
 
   const initialPoses = SCULPTURE_PRESETS.home.ringPoses;
@@ -1189,7 +1044,6 @@ export function InterlockingRings({ onNavigate }: InterlockingRingsProps) {
                     onPointerOver={(e) => handleRingPointerOver(e, spec)}
                     onPointerOut={(e) => handleRingPointerOut(e, spec.id)}
                     onClick={(e) => handleRingClick(e, spec)}
-                    onDoubleClick={(e) => handleRingDoubleClick(e, spec)}
                   />
 
                   <mesh
